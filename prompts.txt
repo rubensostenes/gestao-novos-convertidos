@@ -1,0 +1,5 @@
+quero uma área que possa ver detalhes de cada pessoa cadastrada, com um x para fechar e que seja de boa visualização além de poder atualizar os dados ou deletar a pessoa 
+quero que coloque na parte de enviar para o whatsapp que a pessoa que esteja cadastrando quando apertar em cadastrar a pessoa seja automaticamente enviada para o whatsapp da pessoa que está sendo cadastrada e possa já enviar mensagem sem ter adicionado além de que coloca no código o prefixo do brasil 55 para poder enviar a mensagem já para o número certo
+por favor crie um sistema de banco de dados dentro dele para que salve cada pessoa que for cadastrada e que quando for ficar online ele salve para todos que entrarem no site
+adiciona a congregação de Acaraú, com todos os aspectos das outras e salvando igual 
+adiciona a parte de que se a pessoa colocar sim que tem familia evangélica peça o número e o nome da pessoa

@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Cadastro de Novos Convertidos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <style>
+        .light-blue-bg {
+            background-color: #e6f2ff;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .transition-all {
+            transition: all 0.3s ease;
+        }
+        .congregation-tab.active {
+            border-bottom: 3px solid #3b82f6;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+        .header-bg {
+            background-color: #3b82f6;
+        }
+        .highlight-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+        .family-info {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 2000;
+            overflow-y: auto;
+        }
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 700px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            animation: modalFadeIn 0.3s;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        .close-modal:hover {
+            color: #333;
+        }
+        .action-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .action-btn i {
+            font-size: 14px;
+        }
+        .view-btn {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .view-btn:hover {
+            background-color: #2563eb;
+        }
+        .edit-btn {
+            background-color: #f59e0b;
+            color: white;
+        }
+        .edit-btn:hover {
+            background-color: #d97706;
+        }
+        .delete-btn {
+            background-color: #ef4444;
+            color: white;
+        }
+        .delete-btn:hover {
+            background-color: #dc2626;
+        }
+        .save-btn {
+            background-color: #10b981;
+            color: white;
+        }
+        .save-btn:hover {
+            background-color: #059669;
+        }
+        .whatsapp-btn {
+            background-color: #25D366;
+            color: white;
+        }
+        .whatsapp-btn:hover {
+            background-color: #128C7E;
+        }
+        .detail-row {
+            display: flex;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .detail-label {
+            width: 180px;
+            font-weight: 600;
+            color: #555;
+        }
+        .detail-value {
+            flex: 1;
+            color: #333;
+        }
+        .edit-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 15px;
+        }
+        .edit-select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 15px;
+            background-color: white;
+        }
+        .edit-radio-group {
+            display: flex;
+            gap: 20px;
+        }
+        .edit-radio {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .modal-header {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-footer {
+            margin-top: 25px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .sync-status {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background-color: #3b82f6;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        .sync-status.offline {
+            background-color: #ef4444;
+        }
+        .sync-status.syncing {
+            background-color: #f59e0b;
+        }
+        .required-field::after {
+            content: " *";
+            color: red;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- Toast Notification -->
+        <div id="toast" class="toast">
+            <span id="toastMessage">Cadastro realizado com sucesso!</span>
+        </div>
+
+        <!-- Sync Status Indicator -->
+        <div id="syncStatus" class="sync-status">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <span>Sincronizando dados...</span>
+        </div>
+
+        <!-- Modal for View/Edit -->
+        <div id="detailModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal" id="closeModal">&times;</span>
+                <div class="modal-header">
+                    <span id="modalTitle">Detalhes do Convertido</span>
+                </div>
+                <div id="modalBody">
+                    <!-- Content will be inserted here by JavaScript -->
+                </div>
+                <div class="modal-footer" id="modalFooter">
+                    <!-- Buttons will be inserted here by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Header with Logo -->
+        <header class="header-bg text-white shadow-lg">
+            <div class="container mx-auto px-4 py-6">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <div class="flex items-center mb-4 md:mb-0">
+                        <div class="bg-white p-2 rounded-lg mr-4">
+                            <img src="123.png" alt="Logo da Igreja" class="h-16">
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold">Igreja Evangélica Assembléia de Deus em Pernambuco</h1>
+                            <p class="text-sm opacity-90">Área 61</p>
+                        </div>
+                    </div>
+                    <div class="text-center md:text-right">
+                        <p class="text-sm"><i class="fas fa-map-marker-alt mr-1"></i> Rua Miguel Correia de Sá, 322 - Comportas, Jaboatão dos Guararapes - PE, 54345-590</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="container mx-auto px-4 py-8">
+            <h2 class="text-3xl font-bold text-gray-800 mb-8 text-center">Sistema de Cadastro de Novos Convertidos</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Registration Form -->
+                <div class="lg:col-span-1 bg-white rounded-xl shadow-md overflow-hidden transition-all card-hover">
+                    <div class="header-bg px-6 py-4">
+                        <h3 class="text-xl font-semibold text-white">Cadastrar Novo Convertido</h3>
+                    </div>
+                    <div class="p-6">
+                        <form id="registrationForm" class="space-y-4">
+                            <div>
+                                <label for="name" class="block text-sm font-medium text-gray-700 required-field">Nome Completo</label>
+                                <input type="text" id="name" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
+                            </div>
+                            
+                            <div>
+                                <label for="address" class="block text-sm font-medium text-gray-700 required-field">Endereço</label>
+                                <input type="text" id="address" name="address" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
+                            </div>
+                            
+                            <div>
+                                <label for="phone" class="block text-sm font-medium text-gray-700 required-field">WhatsApp</label>
+                                <input type="tel" id="phone" name="phone" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" placeholder="(00) 00000-0000">
+                            </div>
+                            
+                            <div>
+                                <label for="age" class="block text-sm font-medium text-gray-700 required-field">Idade</label>
+                                <input type="number" id="age" name="age" min="1" max="120" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 required-field">Tem família evangélica?</label>
+                                <div class="mt-2 space-x-4">
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="hasEvangelicalFamily" value="Sim" class="h-4 w-4 text-blue-600 focus:ring-blue-500" id="hasFamilyYes">
+                                        <span class="ml-2 text-sm text-gray-700">Sim</span>
+                                    </label>
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="hasEvangelicalFamily" value="Não" checked class="h-4 w-4 text-blue-600 focus:ring-blue-500" id="hasFamilyNo">
+                                        <span class="ml-2 text-sm text-gray-700">Não</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Family Info Section (hidden by default) -->
+                            <div id="familyInfoSection" class="family-info space-y-4">
+                                <div>
+                                    <label for="familyMemberName" class="block text-sm font-medium text-gray-700 required-field">Nome do familiar evangélico</label>
+                                    <input type="text" id="familyMemberName" name="familyMemberName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
+                                </div>
+                                
+                                <div>
+                                    <label for="familyMemberPhone" class="block text-sm font-medium text-gray-700 required-field">WhatsApp do familiar</label>
+                                    <input type="tel" id="familyMemberPhone" name="familyMemberPhone" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" placeholder="(00) 00000-0000">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 required-field">É a primeira vez como evangélico?</label>
+                                <div class="mt-2 space-x-4">
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="firstTimeEvangelical" value="Sim" checked class="h-4 w-4 text-blue-600 focus:ring-blue-500">
+                                        <span class="ml-2 text-sm text-gray-700">Sim</span>
+                                    </label>
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="firstTimeEvangelical" value="Não" class="h-4 w-4 text-blue-600 focus:ring-blue-500">
+                                        <span class="ml-2 text-sm text-gray-700">Não</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label for="congregation" class="block text-sm font-medium text-gray-700 required-field">Congregação</label>
+                                <select id="congregation" name="congregation" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border">
+                                    <option value="">Selecione uma congregação</option>
+                                    <option value="Comportas">Comportas</option>
+                                    <option value="Alto do Céu">Alto do Céu</option>
+                                    <option value="Engenho São Bartolomeu">Engenho São Bartolomeu</option>
+                                    <option value="Lagoa do Náutico 1">Lagoa do Náutico 1</option>
+                                    <option value="Lagoa do Náutico 2">Lagoa do Náutico 2</option>
+                                    <option value="Acaraú">Acaraú</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <button type="submit" class="w-full header-bg text-white py-2 px-4 rounded-md hover:opacity-90 transition-all flex items-center justify-center">
+                                    <i class="fas fa-user-plus mr-2"></i> Cadastrar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Statistics and List -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Total Summary Card -->
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden p-6 transition-all card-hover">
+                        <h3 class="text-lg font-medium text-gray-900 mb-6">Resumo Geral</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                            <div>
+                                <div class="highlight-number" id="summaryTotal">0</div>
+                                <div class="text-sm text-gray-500 mt-2">Total de convertidos</div>
+                            </div>
+                            <div>
+                                <div class="highlight-number" id="summaryWithFamily">0</div>
+                                <div class="text-sm text-gray-500 mt-2">Com família evangélica</div>
+                            </div>
+                            <div>
+                                <div class="highlight-number" id="summaryFirstTime">0</div>
+                                <div class="text-sm text-gray-500 mt-2">Primeira vez</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Congregation Tabs -->
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                        <div class="border-b border-gray-200">
+                            <nav class="flex -mb-px overflow-x-auto">
+                                <button class="congregation-tab active px-4 py-3 text-sm font-medium whitespace-nowrap" data-congregation="all">
+                                    Todos
+                                </button>
+                                <button class="congregation-tab px-4 py-3 text-sm font-medium text-gray-500 whitespace-nowrap" data-congregation="Comportas">
+                                    Comportas
+                                </button>
+                                <button class="congregation-tab px-4 py-3 text-sm font-medium text-gray-500 whitespace-nowrap" data-congregation="Alto do Céu">
+                                    Alto do Céu
+                                </button>
+                                <button class="congregation-tab px-4 py-3 text-sm font-medium text-gray-500 whitespace-nowrap" data-congregation="Engenho São Bartolomeu">
+                                    Eng. S. Bartolomeu
+                                </button>
+                                <button class="congregation-tab px-4 py-3 text-sm font-medium text-gray-500 whitespace-nowrap" data-congregation="Lagoa do Náutico 1">
+                                    L. Náutico 1
+                                </button>
+                                <button class="congregation-tab px-4 py-3 text-sm font-medium text-gray-500 whitespace-nowrap" data-congregation="Lagoa do Náutico 2">
+                                    L. Náutico 2
+                                </button>
+                                <button class="congregation-tab px-4 py-3 text-sm font-medium text-gray-500 whitespace-nowrap" data-congregation="Acaraú">
+                                    Acaraú
+                                </button>
+                            </nav>
+                        </div>
+                        
+                        <!-- Convert List -->
+                        <div class="p-4">
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WhatsApp</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Idade</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Congregação</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="convertsList" class="bg-white divide-y divide-gray-200">
+                                        <!-- Data will be inserted here by JavaScript -->
+                                        <tr>
+                                            <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Nenhum convertido cadastrado ainda</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Congregation Statistics -->
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden p-6 transition-all card-hover">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Estatísticas por Congregação</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-6 gap-4" id="congregationStats">
+                            <!-- Data will be inserted here by JavaScript -->
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-blue-600">0</div>
+                                <div class="text-sm text-gray-500">Comportas</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-blue-600">0</div>
+                                <div class="text-sm text-gray-500">Alto do Céu</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-blue-600">0</div>
+                                <div class="text-sm text-gray-500">Eng. S. Bartolomeu</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-blue-600">0</div>
+                                <div class="text-sm text-gray-500">L. Náutico 1</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-blue-600">0</div>
+                                <div class="text-sm text-gray-500">L. Náutico 2</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-blue-600">0</div>
+                                <div class="text-sm text-gray-500">Acaraú</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="header-bg text-white py-8 mt-12">
+            <div class="container mx-auto px-4">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <div class="mb-4 md:mb-0">
+                        <h3 class="text-xl font-bold mb-2">Igreja Evangélica</h3>
+                        <p class="text-sm opacity-90">Transformando vidas através de Cristo</p>
+                    </div>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-white hover:text-gray-200">
+                            <i class="fab fa-facebook-f text-xl"></i>
+                        </a>
+                        <a href="#" class="text-white hover:text-gray-200">
+                            <i class="fab fa-instagram text-xl"></i>
+                        </a>
+                        <a href="#" class="text-white hover:text-gray-200">
+                            <i class="fab fa-youtube text-xl"></i>
+                        </a>
+                        <a href="#" class="text-white hover:text-gray-200">
+                            <i class="fab fa-whatsapp text-xl"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="border-t border-white border-opacity-20 mt-6 pt-6 text-sm text-center md:text-left">
+                    <p>© 2023 Igreja Evangélica. Todos os direitos reservados.</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "",
+            authDomain: "",
+            databaseURL: "",
+            projectId: "",
+            storageBucket: "",
+            messagingSenderId: "",
+            appId: "",
+            measurementId: ""
+        };
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        // Data storage
+        let converts = [];
+        let currentEditIndex = -1;
+        let isOnline = false;
+        
+        // DOM Elements
+        const registrationForm = document.getElementById('registrationForm');
+        const convertsList = document.getElementById('convertsList');
+        const congregationStats = document.getElementById('congregationStats');
+        const congregationTabs = document.querySelectorAll('.congregation-tab');
+        const familyInfoSection = document.getElementById('familyInfoSection');
+        const hasFamilyYes = document.getElementById('hasFamilyYes');
+        const hasFamilyNo = document.getElementById('hasFamilyNo');
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        const detailModal = document.getElementById('detailModal');
+        const closeModal = document.getElementById('closeModal');
+        const modalBody = document.getElementById('modalBody');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalFooter = document.getElementById('modalFooter');
+        const syncStatus = document.getElementById('syncStatus');
+        
+        // Summary elements
+        const summaryTotal = document.getElementById('summaryTotal');
+        const summaryWithFamily = document.getElementById('summaryWithFamily');
+        const summaryFirstTime = document.getElementById('summaryFirstTime');
+        
+        // Initialize the app
+        function init() {
+            // Check online status
+            checkOnlineStatus();
+            
+            // Load data from Firebase
+            loadDataFromFirebase();
+            
+            // Event listeners for family info toggle
+            hasFamilyYes.addEventListener('change', toggleFamilyInfo);
+            hasFamilyNo.addEventListener('change', toggleFamilyInfo);
+            
+            // Close modal when clicking X or outside
+            closeModal.addEventListener('click', () => {
+                detailModal.style.display = 'none';
+            });
+            
+            window.addEventListener('click', (event) => {
+                if (event.target === detailModal) {
+                    detailModal.style.display = 'none';
+                }
+            });
+            
+            // Listen for online/offline events
+            window.addEventListener('online', () => {
+                isOnline = true;
+                updateSyncStatus();
+                syncLocalDataWithFirebase();
+            });
+            
+            window.addEventListener('offline', () => {
+                isOnline = false;
+                updateSyncStatus();
+            });
+            
+            // Phone input mask
+            const phoneInput = document.getElementById('phone');
+            const familyPhoneInput = document.getElementById('familyMemberPhone');
+            
+            phoneInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
+                value = value.replace(/(\d)(\d{4})$/, '$1-$2');
+                e.target.value = value;
+            });
+            
+            familyPhoneInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
+                value = value.replace(/(\d)(\d{4})$/, '$1-$2');
+                e.target.value = value;
+            });
+            
+            // Form submission
+            registrationForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                if (validateForm()) {
+                    registerNewConvert();
+                }
+            });
+            
+            // Congregation tabs
+            congregationTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    congregationTabs.forEach(t => t.classList.remove('active', 'text-blue-600'));
+                    this.classList.add('active', 'text-blue-600');
+                    const congregation = this.getAttribute('data-congregation');
+                    renderConvertsList(congregation);
+                });
+            });
+        }
+        
+        // Check online status
+        function checkOnlineStatus() {
+            isOnline = navigator.onLine;
+            updateSyncStatus();
+        }
+        
+        // Update sync status indicator
+        function updateSyncStatus() {
+            if (isOnline) {
+                syncStatus.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i><span>Sincronizando dados...</span>';
+                syncStatus.className = 'sync-status';
+            } else {
+                syncStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i><span>Modo offline - Dados serão sincronizados quando a conexão voltar</span>';
+                syncStatus.className = 'sync-status offline';
+            }
+        }
+        
+        // Load data from Firebase
+        function loadDataFromFirebase() {
+            if (!isOnline) {
+                // Load from localStorage if offline
+                converts = JSON.parse(localStorage.getItem('converts')) || [];
+                updateUI();
+                return;
+            }
+            
+            syncStatus.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i><span>Carregando dados...</span>';
+            
+            database.ref('converts').once('value').then((snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    converts = Object.values(data);
+                    localStorage.setItem('converts', JSON.stringify(converts));
+                    updateUI();
+                } else {
+                    // No data in Firebase, check localStorage
+                    converts = JSON.parse(localStorage.getItem('converts')) || [];
+                    updateUI();
+                    
+                    // If we have local data but no Firebase data, sync it
+                    if (converts.length > 0) {
+                        syncLocalDataWithFirebase();
+                    }
+                }
+                
+                // Set up realtime listener
+                database.ref('converts').on('value', (snapshot) => {
+                    const newData = snapshot.val();
+                    if (newData) {
+                        converts = Object.values(newData);
+                        localStorage.setItem('converts', JSON.stringify(converts));
+                        updateUI();
+                    }
+                });
+                
+                updateSyncStatus();
+            }).catch((error) => {
+                console.error('Error loading data:', error);
+                converts = JSON.parse(localStorage.getItem('converts')) || [];
+                updateUI();
+                updateSyncStatus();
+            });
+        }
+        
+        // Sync local data with Firebase
+        function syncLocalDataWithFirebase() {
+            if (!isOnline) return;
+            
+            syncStatus.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i><span>Sincronizando dados com o servidor...</span>';
+            syncStatus.className = 'sync-status syncing';
+            
+            const localConverts = JSON.parse(localStorage.getItem('converts')) || [];
+            
+            // Convert array to object with IDs for Firebase
+            const convertsObject = {};
+            localConverts.forEach((convert, index) => {
+                convertsObject[index] = convert;
+            });
+            
+            database.ref('converts').set(convertsObject)
+                .then(() => {
+                    showToast('Dados sincronizados com sucesso!');
+                    updateSyncStatus();
+                })
+                .catch((error) => {
+                    console.error('Error syncing data:', error);
+                    showToast('Erro ao sincronizar dados', false);
+                    updateSyncStatus();
+                });
+        }
+        
+        // Show toast notification
+        function showToast(message, isSuccess = true) {
+            toastMessage.textContent = message;
+            toast.style.backgroundColor = isSuccess ? '#4CAF50' : '#f44336';
+            toast.style.display = 'block';
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Toggle family info section
+        function toggleFamilyInfo() {
+            if (hasFamilyYes.checked) {
+                familyInfoSection.style.display = 'block';
+                // Make family fields required when visible
+                document.getElementById('familyMemberName').required = true;
+                document.getElementById('familyMemberPhone').required = true;
+            } else {
+                familyInfoSection.style.display = 'none';
+                // Remove required when hidden
+                document.getElementById('familyMemberName').required = false;
+                document.getElementById('familyMemberPhone').required = false;
+            }
+        }
+        
+        // Validate form before submission
+        function validateForm() {
+            const name = document.getElementById('name').value.trim();
+            const address = document.getElementById('address').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const age = document.getElementById('age').value;
+            const congregation = document.getElementById('congregation').value;
+            
+            // Basic validation
+            if (!name || !address || !phone || !age || !congregation) {
+                showToast('Por favor, preencha todos os campos obrigatórios', false);
+                return false;
+            }
+            
+            // Validate phone format (minimum 14 characters for (00) 00000-0000)
+            if (phone.length < 14) {
+                showToast('Por favor, insira um número de WhatsApp válido', false);
+                return false;
+            }
+            
+            // Validate age
+            if (age < 1 || age > 120) {
+                showToast('Por favor, insira uma idade válida', false);
+                return false;
+            }
+            
+            // Validate family info if "Sim" is selected
+            if (hasFamilyYes.checked) {
+                const familyName = document.getElementById('familyMemberName').value.trim();
+                const familyPhone = document.getElementById('familyMemberPhone').value.trim();
+                
+                if (!familyName || !familyPhone) {
+                    showToast('Por favor, preencha os dados do familiar evangélico', false);
+                    return false;
+                }
+                
+                // Validate family phone format
+                if (familyPhone.length < 14) {
+                    showToast('Por favor, insira um número de WhatsApp válido para o familiar', false);
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+        
+        // Register new convert
+        function registerNewConvert() {
+            const name = document.getElementById('name').value.trim();
+            const address = document.getElementById('address').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const age = document.getElementById('age').value;
+            const hasEvangelicalFamily = document.querySelector('input[name="hasEvangelicalFamily"]:checked').value;
+            const firstTimeEvangelical = document.querySelector('input[name="firstTimeEvangelical"]:checked').value;
+            const congregation = document.getElementById('congregation').value;
+            
+            const newConvert = {
+                name,
+                address,
+                phone,
+                age,
+                hasEvangelicalFamily,
+                firstTimeEvangelical,
+                congregation,
+                registrationDate: new Date().toISOString()
+            };
+            
+            // Add family info if applicable
+            if (hasEvangelicalFamily === "Sim") {
+                newConvert.familyMemberName = document.getElementById('familyMemberName').value.trim();
+                newConvert.familyMemberPhone = document.getElementById('familyMemberPhone').value.trim();
+            }
+            
+            // Add to local storage
+            converts.push(newConvert);
+            localStorage.setItem('converts', JSON.stringify(converts));
+            
+            // Send to Firebase if online
+            if (isOnline) {
+                syncLocalDataWithFirebase();
+            }
+            
+            // Show success message
+            showToast('Convertido cadastrado com sucesso!');
+            
+            // Reset form
+            registrationForm.reset();
+            familyInfoSection.style.display = 'none';
+            
+            // Update UI
+            updateUI();
+            
+            // Send WhatsApp message
+            sendWelcomeWhatsApp(newConvert);
+        }
+        
+        // Send WhatsApp welcome message
+        function sendWelcomeWhatsApp(convert) {
+            // Get phone number (remove non-numeric characters)
+            const phoneNumber = convert.phone.replace(/\D/g, '');
+            
+            // Create message based on congregation
+            let message = `Olá ${convert.name}, paz do Senhor! 👋\n\n`;
+            
+            switch(convert.congregation) {
+                case 'Comportas':
+                    message += `Somos da Igreja Evangélica Assembleia de Deus em Comportas. Ficamos muito felizes por você ter aceitado a Jesus como seu Salvador! 🎉\n\n`;
+                    message += `Nossos cultos acontecem:\n`;
+                    message += `- Terça-feira: 19h30 (Culto de Oração)\n`;
+                    message += `- Quinta-feira: 19h30 (Culto de Doutrina)\n`;
+                    message += `- Domingo: 9h (Escola Bíblica) e 19h (Culto de Louvor)\n\n`;
+                    message += `Estamos orando por você e sua família! 🙏`;
+                    break;
+                    
+                case 'Alto do Céu':
+                    message += `Somos da Igreja Evangélica Assembleia de Deus no Alto do Céu. Que alegria saber que você decidiu seguir a Jesus! ✝️\n\n`;
+                    message += `Nossos cultos acontecem:\n`;
+                    message += `- Terça-feira: 19h (Culto de Oração)\n`;
+                    message += `- Quinta-feira: 19h (Culto de Doutrina)\n`;
+                    message += `- Domingo: 9h (Escola Bíblica) e 18h30 (Culto de Louvor)\n\n`;
+                    message += `Deus abençoe sua nova caminhada!`;
+                    break;
+                    
+                case 'Engenho São Bartolomeu':
+                    message += `Somos da Igreja Evangélica Assembleia de Deus no Engenho São Bartolomeu. Aleluia por sua decisão por Cristo! 🙌\n\n`;
+                    message += `Nossos cultos acontecem:\n`;
+                    message += `- Terça-feira: 19h (Culto de Oração)\n`;
+                    message += `- Quinta-feira: 19h (Culto de Doutrina)\n`;
+                    message += `- Domingo: 9h (Escola Bíblica) e 19h (Culto de Louvor)\n\n`;
+                    message += `Estamos aqui para te apoiar nessa nova jornada!`;
+                    break;
+                    
+                case 'Lagoa do Náutico 1':
+                    message += `Somos da Igreja Evangélica Assembleia de Deus na Lagoa do Náutico 1. Que bênção ter você conosco! 💖\n\n`;
+                    message += `Nossos cultos acontecem:\n`;
+                    message += `- Terça-feira: 19h30 (Culto de Oração)\n`;
+                    message += `- Quinta-feira: 19h30 (Culto de Doutrina)\n`;
+                    message += `- Domingo: 9h (Escola Bíblica) e 19h (Culto de Louvor)\n\n`;
+                    message += `Que Deus continue te abençoando!`;
+                    break;
+                    
+                case 'Lagoa do Náutico 2':
+                    message += `Somos da Igreja Evangélica Assembleia de Deus na Lagoa do Náutico 2. Glória a Deus por sua vida! 🌟\n\n`;
+                    message += `Nossos cultos acontecem:\n`;
+                    message += `- Terça-feira: 19h (Culto de Oração)\n`;
+                    message += `- Quinta-feira: 19h (Culto de Doutrina)\n`;
+                    message += `- Domingo: 9h (Escola Bíblica) e 18h30 (Culto de Louvor)\n\n`;
+                    message += `Seja bem-vindo à família de Deus!`;
+                    break;
+                    
+                case 'Acaraú':
+                    message += `Somos da Igreja Evangélica Assembleia de Deus no Acaraú. Que alegria ter você conosco! 🎊\n\n`;
+                    message += `Nossos cultos acontecem:\n`;
+                    message += `- Terça-feira: 19h30 (Culto de Oração)\n`;
+                    message += `- Quinta-feira: 19h30 (Culto de Doutrina)\n`;
+                    message += `- Domingo: 9h (Escola Bíblica) e 19h (Culto de Louvor)\n\n`;
+                    message += `Que o Senhor te guarde e te fortaleça!`;
+                    break;
+                    
+                default:
+                    message += `Somos da Igreja Evangélica Assembleia de Deus. Ficamos muito felizes por você ter aceitado a Jesus como seu Salvador! 🎉\n\n`;
+                    message += `Em breve entraremos em contato para te informar sobre os horários dos cultos em sua congregação.\n\n`;
+                    message += `Estamos orando por você e sua família! 🙏`;
+            }
+            
+            // Encode message for URL
+            const encodedMessage = encodeURIComponent(message);
+            
+            // Create WhatsApp link
+            const whatsappLink = `https://wa.me/55${phoneNumber}?text=${encodedMessage}`;
+            
+            // Open in new tab
+            window.open(whatsappLink, '_blank');
+            
+
+        }
+        
+        // Update UI with current data
+        function updateUI() {
+            updateStatistics();
+            renderConvertsList();
+            renderCongregationStats();
+            updateSummary();
+        }
+        
+        // Update statistics
+        function updateStatistics() {
+            // Not used in this version but kept for future expansion
+        }
+        
+        // Update summary
+        function updateSummary() {
+            const total = converts.length;
+            const withFamily = converts.filter(convert => convert.hasEvangelicalFamily === "Sim").length;
+            const firstTime = converts.filter(convert => convert.firstTimeEvangelical === "Sim").length;
+            
+            summaryTotal.textContent = total;
+            summaryWithFamily.textContent = withFamily;
+            summaryFirstTime.textContent = firstTime;
+        }
+        
+        // Render converts list
+        function renderConvertsList(congregation = 'all') {
+            let filteredConverts = converts;
+            
+            if (congregation !== 'all') {
+                filteredConverts = converts.filter(convert => convert.congregation === congregation);
+            }
+            
+            if (filteredConverts.length === 0) {
+                convertsList.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
+                            Nenhum convertido encontrado
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            convertsList.innerHTML = filteredConverts.map((convert, index) => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${convert.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${convert.phone}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${convert.age} anos</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${convert.congregation}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button onclick="showConvertDetails(${index})" class="action-btn view-btn">
+                            <i class="fas fa-eye"></i> Ver
+                        </button>
+                        <button onclick="sendWhatsAppMessage(${index})" class="action-btn whatsapp-btn">
+                            <i class="fab fa-whatsapp"></i> WhatsApp
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // Send WhatsApp message to convert
+        function sendWhatsAppMessage(index) {
+            const convert = converts[index];
+            const phoneNumber = convert.phone.replace(/\D/g, '');
+            
+            // Create message based on congregation
+            let message = `Olá ${convert.name}, paz do Senhor! 👋\n\n`;
+            
+            switch(convert.congregation) {
+                case 'Comportas':
+                    message += `Somos da Igreja Evangélica Assembleia de Deus em Comportas. Como você está? Esperamos que esteja bem e crescendo na fé! 🙏\n\n`;
+                    message += `Lembre-se que estamos aqui para te apoiar em sua caminhada com Cristo.\n\n`;
+                    message += `Horários dos cultos:\n`;
+                    message += `- Terça-feira: 19h30 (Culto de Oração)\n`;
+                    message += `- Quinta-feira: 19h30 (Culto de Doutrina)\n`;
+                    message += `- Domingo: 9h (Escola Bíblica) e 19h (Culto de Louvor)\n\n`;
+                    message += `Estamos orando por você!`;
+                    break;
+                    
+                case 'Alto do Céu':
+                    message += `Somos da Igreja Evangélica Assembleia de Deus no Alto do Céu. Como vai sua caminhada com Cristo? ✝️\n\n`;
+                    message += `Horários dos cultos:\n`;
+                    message += `- Terça-feira: 19h (Culto de Oração)\n`;
+                    message += `- Quinta-feira: 19h (Culto de Doutrina)\n`;
+                    message += `- Domingo: 9h (Escola Bíblica) e 18h30 (Culto de Louvor)\n\n`;
+                    message += `Conte conosco para o que precisar!`;
+                    break;
+                    
+                case 'Engenho São Bartolomeu':
+                    message += `Somos da Igreja Evangélica Assembleia de Deus no Engenho São Bartolomeu. Esperamos que esteja firme na fé! 🙌\n\n`;
+                    message += `Horários dos cultos:\n`;
+                    message += `- Terça-feira: 19h (Culto de Oração)\n`;
+                    message += `- Quinta-feira: 19h (Culto de Doutrina)\n`;
+                    message += `- Domingo: 9h (Escola Bíblica) e 19h (Culto de Louvor)\n\n`;
+                    message += `Deus te abençoe!`;
+                    break;
+                    
+                case 'Lagoa do Náutico 1':
+                    message += `Somos da Igreja Evangélica Assembleia de Deus na Lagoa do Náutico 1. Como está sua vida espiritual? 💖\n\n`;
+                    message += `Horários dos cultos:\n`;
+                    message += `- Terça-feira: 19h30 (Culto de Oração)\n`;
+                    message += `- Quinta-feira: 19h30 (Culto de Doutrina)\n`;
+                    message += `- Domingo: 9h (Escola Bíblica) e 19h (Culto de Louvor)\n\n`;
+                    message += `Estamos orando por você!`;
+                    break;
+                    
+                case 'Lagoa do Náutico 2':
+                    message += `Somos da Igreja Evangélica Assembleia de Deus na Lagoa do Náutico 2. Esperamos que esteja crescendo na graça de Deus! 🌟\n\n`;
+                    message += `Horários dos cultos:\n`;
+                    message += `- Terça-feira: 19h (Culto de Oração)\n`;
+                    message += `- Quinta-feira: 19h (Culto de Doutrina)\n`;
+                    message += `- Domingo: 9h (Escola Bíblica) e 18h30 (Culto de Louvor)\n\n`;
+                    message += `Conte conosco!`;
+                    break;
+                    
+                case 'Acaraú':
+                    message += `Somos da Igreja Evangélica Assembleia de Deus no Acaraú. Como está sua comunhão com Deus? 🎊\n\n`;
+                    message += `Horários dos cultos:\n`;
+                    message += `- Terça-feira: 19h30 (Culto de Oração)\n`;
+                    message += `- Quinta-feira: 19h30 (Culto de Doutrina)\n`;
+                    message += `- Domingo: 9h (Escola Bíblica) e 19h (Culto de Louvor)\n\n`;
+                    message += `Que o Senhor te fortaleça!`;
+                    break;
+                    
+                default:
+                    message += `Somos da Igreja Evangélica Assembleia de Deus. Como está sua caminhada com Cristo? 🎉\n\n`;
+                    message += `Estamos orando por você e sua família! 🙏`;
+            }
+            
+            // Encode message for URL
+            const encodedMessage = encodeURIComponent(message);
+            
+            // Create WhatsApp link
+            const whatsappLink = `https://wa.me/55${phoneNumber}?text=${encodedMessage}`;
+            
+            // Open in new tab
+            window.open(whatsappLink, '_blank');
+        }
+        
+        // Render congregation statistics
+        function renderCongregationStats() {
+            const congregations = ['Comportas', 'Alto do Céu', 'Engenho São Bartolomeu', 'Lagoa do Náutico 1', 'Lagoa do Náutico 2', 'Acaraú'];
+            
+            congregationStats.innerHTML = congregations.map(cong => {
+                const count = converts.filter(convert => convert.congregation === cong).length;
+                return `
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-blue-600">${count}</div>
+                        <div class="text-sm text-gray-500">${cong}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Show convert details in modal
+        function showConvertDetails(index, editMode = false) {
+            currentEditIndex = index;
+            const convert = converts[index];
+            
+            if (editMode) {
+                // Edit mode
+                modalTitle.textContent = `Editar ${convert.name}`;
+                
+                modalBody.innerHTML = `
+                    <div class="detail-row">
+                        <div class="detail-label">Nome Completo</div>
+                        <div class="detail-value">
+                            <input type="text" id="editName" class="edit-input" value="${convert.name}">
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Endereço</div>
+                        <div class="detail-value">
+                            <input type="text" id="editAddress" class="edit-input" value="${convert.address}">
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">WhatsApp</div>
+                        <div class="detail-value">
+                            <input type="tel" id="editPhone" class="edit-input" value="${convert.phone}">
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Idade</div>
+                        <div class="detail-value">
+                            <input type="number" id="editAge" class="edit-input" value="${convert.age}">
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Tem família evangélica?</div>
+                        <div class="detail-value">
+                            <div class="edit-radio-group">
+                                <label class="edit-radio">
+                                    <input type="radio" name="editHasEvangelicalFamily" value="Sim" ${convert.hasEvangelicalFamily === "Sim" ? "checked" : ""}>
+                                    Sim
+                                </label>
+                                <label class="edit-radio">
+                                    <input type="radio" name="editHasEvangelicalFamily" value="Não" ${convert.hasEvangelicalFamily === "Não" ? "checked" : ""}>
+                                    Não
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    ${convert.hasEvangelicalFamily === "Sim" ? `
+                    <div class="detail-row">
+                        <div class="detail-label">Nome do familiar</div>
+                        <div class="detail-value">
+                            <input type="text" id="editFamilyMemberName" class="edit-input" value="${convert.familyMemberName || ''}">
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">WhatsApp do familiar</div>
+                        <div class="detail-value">
+                            <input type="tel" id="editFamilyMemberPhone" class="edit-input" value="${convert.familyMemberPhone || ''}">
+                        </div>
+                    </div>
+                    ` : ''}
+                    <div class="detail-row">
+                        <div class="detail-label">Primeira vez evangélico?</div>
+                        <div class="detail-value">
+                            <div class="edit-radio-group">
+                                <label class="edit-radio">
+                                    <input type="radio" name="editFirstTimeEvangelical" value="Sim" ${convert.firstTimeEvangelical === "Sim" ? "checked" : ""}>
+                                    Sim
+                                </label>
+                                <label class="edit-radio">
+                                    <input type="radio" name="editFirstTimeEvangelical" value="Não" ${convert.firstTimeEvangelical === "Não" ? "checked" : ""}>
+                                    Não
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Congregação</div>
+                        <div class="detail-value">
+                            <select id="editCongregation" class="edit-select">
+                                <option value="Comportas" ${convert.congregation === "Comportas" ? "selected" : ""}>Comportas</option>
+                                <option value="Alto do Céu" ${convert.congregation === "Alto do Céu" ? "selected" : ""}>Alto do Céu</option>
+                                <option value="Engenho São Bartolomeu" ${convert.congregation === "Engenho São Bartolomeu" ? "selected" : ""}>Engenho São Bartolomeu</option>
+                                <option value="Lagoa do Náutico 1" ${convert.congregation === "Lagoa do Náutico 1" ? "selected" : ""}>Lagoa do Náutico 1</option>
+                                <option value="Lagoa do Náutico 2" ${convert.congregation === "Lagoa do Náutico 2" ? "selected" : ""}>Lagoa do Náutico 2</option>
+                                <option value="Acaraú" ${convert.congregation === "Acaraú" ? "selected" : ""}>Acaraú</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+                
+                modalFooter.innerHTML = `
+                    <button onclick="saveConvertChanges()" class="action-btn save-btn">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                    <button onclick="showConvertDetails(${index})" class="action-btn view-btn">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                `;
+            } else {
+                // View mode
+                modalTitle.textContent = `Detalhes de ${convert.name}`;
+                
+                modalBody.innerHTML = `
+                    <div class="detail-row">
+                        <div class="detail-label">Nome Completo</div>
+                        <div class="detail-value">${convert.name}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Endereço</div>
+                        <div class="detail-value">${convert.address}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">WhatsApp</div>
+                        <div class="detail-value">${convert.phone}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Idade</div>
+                        <div class="detail-value">${convert.age} anos</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Tem família evangélica?</div>
+                        <div class="detail-value">${convert.hasEvangelicalFamily}</div>
+                    </div>
+                    ${convert.hasEvangelicalFamily === "Sim" ? `
+                    <div class="detail-row">
+                        <div class="detail-label">Nome do familiar</div>
+                        <div class="detail-value">${convert.familyMemberName}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">WhatsApp do familiar</div>
+                        <div class="detail-value">${convert.familyMemberPhone}</div>
+                    </div>
+                    ` : ''}
+                    <div class="detail-row">
+                        <div class="detail-label">Primeira vez evangélico?</div>
+                        <div class="detail-value">${convert.firstTimeEvangelical}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Congregação</div>
+                        <div class="detail-value">${convert.congregation}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Data de cadastro</div>
+                        <div class="detail-value">${new Date(convert.registrationDate).toLocaleDateString('pt-BR')}</div>
+                    </div>
+                `;
+                
+                modalFooter.innerHTML = `
+                    <button onclick="showConvertDetails(${index}, true)" class="action-btn edit-btn">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
+                    <button onclick="deleteConvert(${index})" class="action-btn delete-btn">
+                        <i class="fas fa-trash"></i> Excluir
+                    </button>
+                    <button onclick="sendWhatsAppMessage(${index})" class="action-btn whatsapp-btn">
+                        <i class="fab fa-whatsapp"></i> WhatsApp
+                    </button>
+                `;
+            }
+            
+            detailModal.style.display = 'block';
+        }
+        
+        // Save convert changes
+        function saveConvertChanges() {
+            const convert = converts[currentEditIndex];
+            
+            // Get edited values
+            convert.name = document.getElementById('editName').value.trim();
+            convert.address = document.getElementById('editAddress').value.trim();
+            convert.phone = document.getElementById('editPhone').value.trim();
+            convert.age = document.getElementById('editAge').value;
+            convert.hasEvangelicalFamily = document.querySelector('input[name="editHasEvangelicalFamily"]:checked').value;
+            convert.firstTimeEvangelical = document.querySelector('input[name="editFirstTimeEvangelical"]:checked').value;
+            convert.congregation = document.getElementById('editCongregation').value;
+            
+            // Update family info if applicable
+            if (convert.hasEvangelicalFamily === "Sim") {
+                convert.familyMemberName = document.getElementById('editFamilyMemberName').value.trim();
+                convert.familyMemberPhone = document.getElementById('editFamilyMemberPhone').value.trim();
+            } else {
+                convert.familyMemberName = "";
+                convert.familyMemberPhone = "";
+            }
+            
+            // Update local storage
+            localStorage.setItem('converts', JSON.stringify(converts));
+            
+            // Sync with Firebase if online
+            if (isOnline) {
+                syncLocalDataWithFirebase();
+            }
+            
+            // Show success message
+            showToast('Alterações salvas com sucesso!');
+            
+            // Update UI
+            updateUI();
+            
+            // Return to view mode
+            showConvertDetails(currentEditIndex);
+        }
+        
+        // Delete convert
+        function deleteConvert(index) {
+            if (confirm('Tem certeza que deseja excluir este convertido?')) {
+                converts.splice(index, 1);
+                
+                // Update local storage
+                localStorage.setItem('converts', JSON.stringify(converts));
+                
+                // Sync with Firebase if online
+                if (isOnline) {
+                    syncLocalDataWithFirebase();
+                }
+                
+                // Show success message
+                showToast('Convertido excluído com sucesso!');
+                
+                // Update UI
+                updateUI();
+                
+                // Close modal
+                detailModal.style.display = 'none';
+            }
+        }
+        
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+<p style="border-radius: 8px; text-align: center; font-size: 12px; color: #fff; margin-top: 16px;position: fixed; left: 8px; bottom: 8px; z-index: 10; background: rgba(0, 0, 0, 0.8); padding: 4px 8px;">Made with <img src="https://enzostvs-deepsite.hf.space/logo.svg" alt="DeepSite Logo" style="width: 16px; height: 16px; vertical-align: middle;display:inline-block;margin-right:3px;filter:brightness(0) invert(1);"><a href="https://enzostvs-deepsite.hf.space" style="color: #fff;text-decoration: underline;" target="_blank" >DeepSite</a> - 🧬 <a href="https://enzostvs-deepsite.hf.space?remix=reubensssdsSsw/cadastro" style="color: #fff;text-decoration: underline;" target="_blank" >Remix</a></p></body>
+</html>
